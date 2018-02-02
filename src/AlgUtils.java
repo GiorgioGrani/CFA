@@ -84,4 +84,24 @@ public class AlgUtils {
         }
         return true;
     }
+
+
+    public static boolean ParetoDominance( Map<String, Double> a, Map<String, Double> b){
+        // return true if a less or equal of b for all compontents
+        // and exists one component such that the
+        // inequality is strict
+        boolean check = false;
+
+        for(String y : a.keySet()){
+            double ai = a.get(y);
+            double bi = b.get(y);
+            if(ai > bi){
+                return false;
+            }else if(!check && ai < bi){
+                check = true;
+            }
+        }
+
+        return check;
+    }
 }

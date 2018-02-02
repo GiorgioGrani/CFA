@@ -22,6 +22,7 @@ public class Problem {
     private Map<String, Double> idealvector;
     private static Map<String, Double> val;
     public static double eps = 10e-8;
+    private boolean isSolvable = true;
 
 
     public Problem(long ID,double [][] objectives, double [][] matrixA, double[] b,boolean[] binary, int norm) throws IloException {
@@ -147,9 +148,11 @@ public class Problem {
     }
 
     private boolean setObjective() throws IloException{
-        boolean solvable = this.idealVectorFiller();
-        if(!solvable){
-            return false;
+        if(ID == 0 || this.norm == 2) {
+            boolean solvable = this.idealVectorFiller();
+            if (!solvable) {
+                return false;
+            }
         }
         if(this.norm == 1){
             IloNumExpr expr = this.cplex.linearNumExpr();
@@ -223,12 +226,14 @@ public class Problem {
 
         boolean solvablesingleton = this.setObjective();
         if(!solvablesingleton){
+            this.isSolvable = false;
             return false;
         }
 
         this.solverSettings();
         boolean solvable = this.cplex.solve();
         if(!solvable){
+            this.isSolvable = false;
             return false;
         }
         this.relsol = new TreeMap<>();
@@ -241,8 +246,12 @@ public class Problem {
             this.pareto.put(y, this.cplex.getValue(this.objectives.get(y)));
         }
         //this.pareto.put("bau", (double)this.level);
-
+        this.isSolvable = true;
         return true;
+    }
+
+    public boolean isSolvable(){
+        return this.isSolvable;
     }
 
     //public void approximate() throws IloException{
@@ -278,6 +287,7 @@ public class Problem {
         int m = this.objectives.keySet().size();
         int [] counter = new int [m];
         boolean [] flip = new boolean [m];
+        double [] recorder = new double [m];
         for(int i = 0; i < (AlgUtils.pow(2,m)) ; i++){
             Map<String, IloAddable> map = new TreeMap<>();
             int j = 0;
@@ -294,12 +304,14 @@ public class Problem {
                         //System.out.println("val:"+val);
                         IloAddable con = this.cplex.addLe(this.objectives.get(s), relval - val);
                         //System.out.println("ID+"+ID+" true  "+con);
+                    recorder[j] = relval - val;
 
                         map.put(s + this.ID+"le", con);
                         this.model.remove(con);
                 }else{
                     IloAddable con = this.cplex.addGe(this.objectives.get(s), relval );
                     //System.out.println("ID+"+ID+" false "+con);
+                    recorder[j] = relval;
 
                     map.put(s + this.ID+"ge", con);
                     this.model.remove(con);
@@ -312,7 +324,7 @@ public class Problem {
 
 
             if( !AlgUtils.checkFailure( flip)) {
-                //System.out.println(this.ID+"- "+flip[0] + " "+ flip[1]+" "+flip[2]);
+                System.out.println(this.ID+"- "+flip[0] + " "+recorder[0]+ " "+ flip[1]+" "+recorder[1]+ " "+flip[2]+ " "+recorder[2]);
                 list.add(map);
             }
         }
